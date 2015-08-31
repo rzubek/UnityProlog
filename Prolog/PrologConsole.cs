@@ -29,7 +29,7 @@ using UnityEngine;
 
 namespace Prolog
 {
-    class PrologConsole : Console
+    public class PrologConsole : Console
     {
 #pragma warning disable 649
         public GameObject DefaultGameObject;
@@ -62,8 +62,8 @@ namespace Prolog
         {
 
             if (command != ";")
-                Out.Write("?- ");
-            Out.WriteLine(command);
+                Out.Write("<b>?- ");
+            Out.WriteLine(command+"</b>");
             repl.ProcessCommandLine(command);
         }
 
