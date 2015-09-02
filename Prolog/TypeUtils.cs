@@ -224,9 +224,17 @@ namespace Prolog
             if (methodName == null) throw new ArgumentNullException("methodName");
             var type = value as Type;
             if (type != null)
-                return type.InvokeMember(methodName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.InvokeMethod, null, type, args);
-            return value.GetType().InvokeMember(methodName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance | BindingFlags.InvokeMethod, null, value, args);
+                return type.InvokeMember(methodName,
+                    BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static 
+                    | BindingFlags.InvokeMethod | BindingFlags.OptionalParamBinding,
+                    null, type, args);
+            return value.GetType().InvokeMember(methodName,
+                BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance
+                | BindingFlags.InvokeMethod | BindingFlags.OptionalParamBinding, null, value, args);
         }
+
+        private const BindingFlags FieldOrPropertyBindingFlags =
+            BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static;
 
         /// <summary>
         /// Returns the value of the object's specified field or property.
@@ -240,18 +248,18 @@ namespace Prolog
             {
                 // value is a type; check for both static fields and type fields.
                 // Check for static fields
-                FieldInfo f = t.GetField(memberName);
+                FieldInfo f = t.GetField(memberName, FieldOrPropertyBindingFlags);
                 if (f != null && f.IsStatic)
                     return f.GetValue(value);
-                PropertyInfo p = t.GetProperty(memberName);
+                PropertyInfo p = t.GetProperty(memberName, FieldOrPropertyBindingFlags);
                 if (p != null)
                     return p.GetValue(value, new object[0]);
                 // Now check for instance fields of the type object itself.
                 t = value.GetType();
-                f = t.GetField(memberName);
+                f = t.GetField(memberName, FieldOrPropertyBindingFlags);
                 if (f != null)
                     return f.GetValue(value);
-                p = t.GetProperty(memberName);
+                p = t.GetProperty(memberName, FieldOrPropertyBindingFlags);
                 if (p != null)
                     return p.GetValue(value, new object[0]);
             }
