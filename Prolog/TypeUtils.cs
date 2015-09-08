@@ -45,7 +45,8 @@ namespace Prolog
                                                            "{0}, Assembly-CSharp",
                                                            "{0}, Assembly-UnityScript",
                                                            "{0}, Assembly-Boo",
-                                                           "Prolog.{0}, Prolog",
+                                                           // "Prolog.{0}, Prolog", // in this version, we stuff Prolog into a different assembly:
+                                                           "Prolog.{0}, Assembly-CSharp",
                                                            "UnityEngine.{0}, UnityEngine",
                                                            "System.{0}"
                                                        };

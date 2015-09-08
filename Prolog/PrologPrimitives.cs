@@ -444,6 +444,17 @@ namespace Prolog
             DefinePrimitive(">>", ELNodeQueryImplementation, "eremic logic",
                             "Binds VARIABLE to the subtree of the EL KB matching EXPRESSION.",
                             "*expression", "-variable");
+
+
+            // highrise primitives
+            DefinePrimitive("loc_get", LocGet, "other predicates",
+                            "Produces a localized STRING given a LIST of loc keys and replacements.", "-string", "+list");
+            DefinePrimitive("print", PrintImplementation, "other predicates",
+                            "Prints arguments to built-in buffer; string arguments are not quoted.", "?argument", "...");
+            DefinePrimitive("println", PrintLnImplementation, "other predicates",
+                            "Prints arguments to built-in buffer; string arguments are not quoted.", "?argument", "...");
+            DefinePrimitive("printloc", PrintLocImplementation, "other predicates",
+                            "Prints arguments to built-in buffer; string arguments are not quoted.", "+list", "...");
         }
 
         #region Primitive table
@@ -3201,5 +3212,80 @@ namespace Prolog
             return CutStateSequencer.Succeed();
         } 
         #endregion
+
+
+
+        //
+        // highrise hacks
+
+        private static IEnumerable<CutState> LocGet(object[] args, PrologContext context)
+        {
+            if (args.Length != 2) throw new ArgumentCountException("loc", args, "string", "list_of_args");
+            object arg0 = Term.Deref(args[0]);
+            var s = arg0 as string;
+            if (s == null)
+            {
+                object arg1 = Term.Deref(args[1]);
+                if (arg1 == null)
+                    return Term.UnifyAndReturnCutState(arg0, "");
+                var t = arg1 as Structure;
+                if (t != null && t.IsFunctor(Symbol.PrologListConstructor, 2)) {
+                    var arglist = Prolog.PrologListToIList(t);
+                    var result = HighriseInterop.LocCallback(arglist);
+                    return Term.UnifyAndReturnCutState(arg0, result);
+                }
+                throw new ArgumentException(
+                    "First argument must be a string (or uninstantiated) and second argument must be a list of words (or uninstantiated).");
+            }
+            return Term.UnifyAndReturnCutState(Prolog.StringToWordList(s), args[1]);
+        }
+
+        private static IEnumerable<CutState> PrintImplementation (object[] args, PrologContext context) {
+            foreach (var a in args) {
+                var arg = Term.Deref(a);
+                var str = arg as string;
+                if (str != null)
+                    HighriseInterop.PrintCallback(str, false);
+                else
+                    HighriseInterop.PrintCallback(Term.ToStringInPrologFormat(arg), false);
+            }
+            return CutStateSequencer.Succeed();
+        }
+
+        private static IEnumerable<CutState> PrintLnImplementation (object[] args, PrologContext context) {
+            foreach (var a in args) {
+                var arg = Term.Deref(a);
+                var str = arg as string;
+                if (str != null)
+                    HighriseInterop.PrintCallback(str, true);
+                else
+                    HighriseInterop.PrintCallback(Term.ToStringInPrologFormat(arg), true);
+            }
+            return CutStateSequencer.Succeed();
+        }
+
+        private static IEnumerable<CutState> PrintLocImplementation (object[] args, PrologContext context) {
+            if (args.Length != 1) throw new ArgumentCountException("printloc", args, "list_of_args");
+            object arg = Term.Deref(args[0]);
+            if (arg is string) {
+                HighriseInterop.PrintLocCallback(new List<object>() { arg }, false);
+            } else if (arg != null) {
+                var t = arg as Structure;
+                if (t != null && t.IsFunctor(Symbol.PrologListConstructor, 2)) {
+                    var arglist = Prolog.PrologListToIList(t);
+                    HighriseInterop.PrintLocCallback(arglist, false);
+                }
+            }
+            return CutStateSequencer.Succeed();
+        }
+    }
+
+    //
+    // highrise hacks
+
+    public static class HighriseInterop {
+        public static Func<List<object>, string> LocCallback;
+        public static Action<string, bool> PrintCallback;
+        public static Action<List<object>, bool> PrintLocCallback;
     }
 }
